@@ -1,4 +1,4 @@
-#if defined(__arm__) && defined(MBED_SB)
+#if defined(__arm__) && defined(MBED)
 
 #include "MbedHardwareSPI.h"
 

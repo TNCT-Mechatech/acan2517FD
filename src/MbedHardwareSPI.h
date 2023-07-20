@@ -1,4 +1,4 @@
-#if defined(__arm__) && defined(MBED_SB)
+#if defined(__arm__) && defined(MBED)
 
 #ifndef _MBED_HARDWARE_SPI_H_
 #define _MBED_HARDWARE_SPI_H_
