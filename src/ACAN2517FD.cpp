@@ -149,7 +149,8 @@ namespace acan2517fd {
             mTXBWS_RequestedMode(0),
             mHardwareReceiveBufferOverflowCount(0),
             mDriverReceiveBuffer(),
-            mDriverTransmitBuffer() {
+            mDriverTransmitBuffer(),
+            mIsLock(false) {
     }
 
 //----------------------------------------------------------------------------------------------------------------------
