@@ -167,6 +167,9 @@ namespace acan2517fd {
 
     uint32_t ACAN2517FD::begin(const ACAN2517FDSettings &inSettings,
                                const ACAN2517FDFilters &inFilters) {
+        //  disable interrupts
+        lock();
+
         uint32_t errorCode = 0; // Means no error
 //----------------------------------- If ok, check if settings are correct
         if (!inSettings.mArbitrationBitRateClosedToDesiredRate) {
@@ -449,6 +452,8 @@ namespace acan2517fd {
             mHardwareTxFIFOFull = false;
             mHardwareReceiveBufferOverflowCount = 0;
         }
+        //  enable interrupts
+        unlock();
 //---
         return errorCode;
     }
@@ -1118,7 +1123,7 @@ namespace acan2517fd {
     }
 
     void ACAN2517FD::unlock(void) {
-        mIsLock = true;
+        mIsLock = false;
     }
 //----------------------------------------------------------------------------------------------------------------------
 
