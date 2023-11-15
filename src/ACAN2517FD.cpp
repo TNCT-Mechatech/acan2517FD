@@ -458,6 +458,8 @@ namespace acan2517fd {
 
     bool ACAN2517FD::end(void) {
         mSPI.beginTransaction(isConfigurationMode);
+        //  disable interrupt
+        lock();
         //--- Request configuration mode
         bool wait = true;
         bool ok = false;
@@ -482,6 +484,8 @@ namespace acan2517fd {
         mCallBackFunctionArray = nullptr;
         mDriverReceiveBuffer.initWithSize(0);
         mDriverTransmitBuffer.initWithSize(0);
+        // enable interrupt
+        unlock();
         mSPI.endTransaction();
 //---
         return ok;
@@ -495,6 +499,9 @@ namespace acan2517fd {
         bool ok = inMessage.isValid();
         if (ok) {
             mSPI.beginTransaction(isConfigurationMode);
+            //   disable interrupt
+            lock();
+
             if (inMessage.idx == 0) {
                 ok = inMessage.len <= mTransmitFIFOPayload;
                 if (ok) {
@@ -506,6 +513,9 @@ namespace acan2517fd {
                     ok = sendViaTXQ(inMessage);
                 }
             }
+
+            //  enable interrupt
+            unlock();
             mSPI.endTransaction();
         }
         return ok;
@@ -691,7 +701,13 @@ namespace acan2517fd {
 
     bool ACAN2517FD::available(void) {
         mSPI.beginTransaction(isConfigurationMode);
+        //  disable interrupt
+        lock();
+
         const bool hasReceivedMessage = mDriverReceiveBuffer.count() > 0;
+
+        //  enable interrupt
+        unlock();
         mSPI.endTransaction();
         return hasReceivedMessage;
     }
@@ -700,6 +716,9 @@ namespace acan2517fd {
 
     bool ACAN2517FD::receive(CANFDMessage &outMessage) {
         mSPI.beginTransaction(isConfigurationMode);
+        //  disable interrupt
+        lock();
+
         const bool hasReceivedMessage = mDriverReceiveBuffer.remove(outMessage);
         //--- If receive interrupt is disabled, enable it (added in release 2.17)
         if (!mRxInterruptEnabled) {
@@ -708,6 +727,9 @@ namespace acan2517fd {
             data8 |= (1 << 1); // Receive FIFO Interrupt Enable
             writeRegister8Assume_SPI_transaction(INT_REGISTER + 2, data8);
         }
+
+        //  enable interrupt
+        unlock();
         mSPI.endTransaction();
         return hasReceivedMessage;
     }
@@ -735,7 +757,13 @@ namespace acan2517fd {
 //    POLLING
 //----------------------------------------------------------------------------------------------------------------------
     void ACAN2517FD::poll(void) {
+        //  disable interrupt
+        lock();
+
         isr_poll_core();
+
+        //  enable interrupt
+        unlock();
     }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -743,6 +771,11 @@ namespace acan2517fd {
 //----------------------------------------------------------------------------------------------------------------------
 
     void ACAN2517FD::isr_poll_core(void) {
+        //  check if process is locked
+        if (mIsLock) {
+            return;
+        }
+
         mSPI.beginTransaction(isConfigurationMode);
         bool handled = true;
         while (handled) {
@@ -947,9 +980,13 @@ namespace acan2517fd {
 
     void ACAN2517FD::writeRegister8(const uint16_t inRegisterAddress, const uint8_t inValue) {
         mSPI.beginTransaction(isConfigurationMode);
+        //  disable interrupt
+        lock();
 
         writeRegister8Assume_SPI_transaction(inRegisterAddress, inValue);
 
+        //  enable interrupt
+        unlock();
         mSPI.endTransaction();
     }
 
@@ -957,9 +994,13 @@ namespace acan2517fd {
 
     uint8_t ACAN2517FD::readRegister8(const uint16_t inRegisterAddress) {
         mSPI.beginTransaction(isConfigurationMode);
+        //  disable interrupt
+        lock();
 
         const uint8_t result = readRegister8Assume_SPI_transaction(inRegisterAddress);
 
+        //  enable interrupt
+        unlock();
         mSPI.endTransaction();
         return result;
     }
@@ -968,9 +1009,13 @@ namespace acan2517fd {
 
     uint16_t ACAN2517FD::readRegister16(const uint16_t inRegisterAddress) {
         mSPI.beginTransaction(isConfigurationMode);
+        //  disable interrupt
+        lock();
 
         const uint16_t result = readRegister16Assume_SPI_transaction(inRegisterAddress);
 
+        //  enable interrupt
+        unlock();
         mSPI.endTransaction();
         return result;
     }
@@ -979,9 +1024,13 @@ namespace acan2517fd {
 
     void ACAN2517FD::writeRegister32(const uint16_t inRegisterAddress, const uint32_t inValue) {
         mSPI.beginTransaction(isConfigurationMode);
+        //  disable interrupt
+        lock();
 
         writeRegister32Assume_SPI_transaction(inRegisterAddress, inValue);
 
+        //  enable interrupt
+        unlock();
         mSPI.endTransaction();
     }
 
@@ -989,9 +1038,13 @@ namespace acan2517fd {
 
     uint32_t ACAN2517FD::readRegister32(const uint16_t inRegisterAddress) {
         mSPI.beginTransaction(isConfigurationMode);
+        //  disable interrupt
+        lock();
 
         const uint32_t result = readRegister32Assume_SPI_transaction(inRegisterAddress);
 
+        //  enable interrupt
+        unlock();
         mSPI.endTransaction();
         return result;
     }
@@ -1033,11 +1086,15 @@ namespace acan2517fd {
 
     void ACAN2517FD::reset2517FD(void) {
         mSPI.beginTransaction(isConfigurationMode); // Check RESET is performed with 1 MHz clock
+        //  disable interrupt
+        lock();
 
         mSPI.assertCS();
         mSPI.transfer16(0x00); // Reset instruction: 0x0000
         mSPI.deassertCS();
 
+        //  enable interrupt
+        unlock();
         mSPI.endTransaction();
     }
 
@@ -1053,6 +1110,15 @@ namespace acan2517fd {
         return readRegister32(inIndex ? BDIAG1_REGISTER : BDIAG0_REGISTER);
     }
 
+//----------------------------------------------------------------------------------------------------------------------
+
+    void ACAN2517FD::lock(void) {
+        mIsLock = true;
+    }
+
+    void ACAN2517FD::unlock(void) {
+        mIsLock = true;
+    }
 //----------------------------------------------------------------------------------------------------------------------
 
 }
