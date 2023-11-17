@@ -783,6 +783,9 @@ namespace acan2517fd {
         }
 
         mSPI.beginTransaction(isConfigurationMode);
+        //  disable interrupt
+        lock();
+
         bool handled = true;
         while (handled) {
             handled = false;
@@ -820,6 +823,9 @@ namespace acan2517fd {
                 writeRegister8Assume_SPI_transaction(FIFOSTA_REGISTER(RECEIVE_FIFO_INDEX), ~(1 << 3));
             }
         }
+
+        //  enable interrupt
+        unlock();
         mSPI.endTransaction();
     }
 
